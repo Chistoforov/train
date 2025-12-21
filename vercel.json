@@ -5,6 +5,15 @@
       "source": "/api/trains",
       "destination": "/api/trains.js"
     }
+  ],
+  "routes": [
+    {
+      "src": "/api/(.*)",
+      "dest": "/api/$1.js"
+    },
+    {
+      "handle": "filesystem"
+    }
   ]
 }
 
