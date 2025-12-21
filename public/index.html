@@ -437,7 +437,15 @@
         setError(null);
         
         try {
-          const res = await fetch(`/api/trains?stationId=${currentDir.fromStation}`);
+          // Add timestamp to prevent caching and explicitly disable cache
+          const timestamp = Date.now();
+          const res = await fetch(`/api/trains?stationId=${currentDir.fromStation}&_t=${timestamp}`, {
+            cache: 'no-store',
+            headers: {
+              'Cache-Control': 'no-cache, no-store, must-revalidate',
+              'Pragma': 'no-cache'
+            }
+          });
           if (!res.ok) throw new Error('Network response was not ok');
           
           const data = await res.json();
@@ -515,10 +523,10 @@
         setProcessedTrains([]);
       }, [directionId]);
 
-      // Effect: Fetch on mount and direction change, and every 60s
+      // Effect: Fetch on mount and direction change, and every 30s for fresh delay data
       useEffect(() => {
         fetchTrains();
-        const pollInterval = setInterval(fetchTrains, 60000);
+        const pollInterval = setInterval(fetchTrains, 30000); // Update every 30s to catch delays quickly
         return () => clearInterval(pollInterval);
       }, [fetchTrains]);
 

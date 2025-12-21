@@ -43,8 +43,17 @@ self.addEventListener('activate', (event) => {
 
 // Fetch event - serve from cache, fallback to network
 self.addEventListener('fetch', (event) => {
-  // Skip API requests - always fetch from network
+  // API requests - always fetch from network, never cache
   if (event.request.url.includes('/api/')) {
+    event.respondWith(
+      fetch(event.request, {
+        cache: 'no-store',
+        headers: {
+          'Cache-Control': 'no-cache, no-store, must-revalidate',
+          'Pragma': 'no-cache'
+        }
+      })
+    );
     return;
   }
 

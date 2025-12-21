@@ -279,6 +279,11 @@ async function fetchCPSchedule(fromId, toId, date) {
 }
 
 app.get('/api/trains', async (req, res) => {
+    // Prevent caching of API responses - always fetch fresh data
+    res.setHeader('Cache-Control', 'no-store, no-cache, must-revalidate, private');
+    res.setHeader('Pragma', 'no-cache');
+    res.setHeader('Expires', '0');
+    
     const { stationId } = req.query;
     
     if (!stationId) {
