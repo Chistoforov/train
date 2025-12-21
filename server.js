@@ -520,6 +520,7 @@ app.get('/api/trains', async (req, res) => {
                 }
                 
                 // Then, add remaining schedule times without live trains
+                // First, add today's future schedule times
                 for (let i = 0; i < futureScheduleTimes.length && results.length < 10; i++) {
                     const scheduleItem = futureScheduleTimes[i];
                     const { scheduledTimeStr, departureTime } = scheduleItem;
@@ -548,6 +549,41 @@ app.get('/api/trains', async (req, res) => {
                         });
                     }
                 }
+                
+                // If we have fewer than 4 results, add tomorrow's morning trains
+                if (results.length < 4) {
+                    // Add first morning trains from tomorrow (up to 4 total)
+                    const morningTrainsCount = Math.min(4 - results.length, staticSchedule.length);
+                    for (let i = 0; i < morningTrainsCount && results.length < 4; i++) {
+                        const scheduledTimeStr = staticSchedule[i];
+                        const scheduledTime = parseTime(scheduledTimeStr);
+                        // Set to tomorrow
+                        scheduledTime.setDate(scheduledTime.getDate() + 1);
+                        
+                        const departureTime = stationOffset === 0 
+                            ? scheduledTime 
+                            : new Date(scheduledTime.getTime() + stationOffset * 60000);
+                        
+                        const minutesToDeparture = Math.round((departureTime - now) / 60000);
+                        
+                        // Skip if this schedule time was already in results (either matched or already added)
+                        const alreadyExists = results.some(r => r.scheduledTime === scheduledTimeStr);
+                        if (!alreadyExists) {
+                            console.log(`  📤 Adding tomorrow's morning train: trainNr=null, scheduledTime=${scheduledTimeStr}, minutesToDeparture=${minutesToDeparture}`);
+                            results.push({
+                                trainNr: null,
+                                scheduledTime: scheduledTimeStr,
+                                minutesToDeparture: minutesToDeparture,
+                                trainStatus: "P",
+                                destination: stationId === '94-21014' ? 'Cais do Sodre' : 'Cascais',
+                                isDelayed: false
+                            });
+                        }
+                    }
+                }
+                
+                // Sort results by minutesToDeparture to ensure correct order
+                results.sort((a, b) => a.minutesToDeparture - b.minutesToDeparture);
                 
                 if (results.length > 0) {
                     console.log(`✅ Found ${results.length} trains from static schedule`);

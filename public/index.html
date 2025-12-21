@@ -408,9 +408,7 @@
             <div className="platform">
               {trainNr ? (
                 <>Train <span className="platform-number">{trainNr}</span></>
-              ) : (
-                <span style={{opacity: 0.5}}>Schedule</span>
-              )}
+              ) : null}
             </div>
             <div className={`status ${isDelayed ? 'delayed' : 'on-time'}`}>
               <div className="status-dot"></div>
@@ -471,7 +469,7 @@
             const minutesToDeparture = Math.max(0, Math.floor(diffMs / 60000));
 
             return {
-              id: t.trainNr, 
+              id: t.trainNr || `schedule-${t.scheduledTime}`, // Use scheduledTime as ID for trains without number
               scheduledTime: t.scheduledTime,
               actualTime,
               minutesToDeparture,
@@ -482,23 +480,33 @@
             };
           })
           .filter(t => t.minutesToDeparture >= -2) // Keep trains that departed less than 2 minutes ago (in case of delays)
-          // Remove duplicates by train number - keep the one with the earliest departure time
+          // Remove duplicates: by train number if exists, otherwise by scheduledTime
           .reduce((acc, train) => {
-            const existing = acc.find(t => t.trainNr === train.trainNr);
-            if (!existing || train.minutesToDeparture < existing.minutesToDeparture) {
-              // Remove existing duplicate if found
-              if (existing) {
-                const index = acc.indexOf(existing);
-                acc.splice(index, 1);
+            if (train.trainNr) {
+              // For trains with number: deduplicate by train number
+              const existing = acc.find(t => t.trainNr === train.trainNr);
+              if (!existing || train.minutesToDeparture < existing.minutesToDeparture) {
+                if (existing) {
+                  const index = acc.indexOf(existing);
+                  acc.splice(index, 1);
+                }
+                acc.push(train);
               }
-              acc.push(train);
+            } else {
+              // For trains without number: deduplicate by scheduledTime
+              const existing = acc.find(t => !t.trainNr && t.scheduledTime === train.scheduledTime);
+              if (!existing) {
+                acc.push(train);
+              }
             }
             return acc;
           }, [])
-          .sort((a, b) => a.minutesToDeparture - b.minutesToDeparture) // Sort by minutes to departure
-          .slice(0, 4); // Show top 4
+          .sort((a, b) => a.minutesToDeparture - b.minutesToDeparture); // Sort by minutes to departure
 
-        setProcessedTrains(nextTrains);
+        // Always show up to 4 trains, but if we have fewer and it's end of day, show what we have
+        const displayTrains = nextTrains.slice(0, 4);
+        
+        setProcessedTrains(displayTrains);
       }, [rawData]);
 
       // Effect: Clear data when direction changes
