@@ -308,7 +308,7 @@
   <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
 
   <script type="text/babel">
-    const { useState, useEffect, useMemo, useCallback } = React;
+    const { useState, useEffect, useMemo, useCallback, useRef } = React;
 
     const STATIONS = {
       CARCAVELOS: '94-21014',
@@ -463,6 +463,9 @@
         }
       }, [directionId]);
 
+      // Store fixed disappearance times on client side
+      const fixedDisappearanceTimesRef = useRef(new Map());
+      
       // 2. Process Data (Recalculate times)
       const updateProcessedTrains = useCallback(() => {
         const now = Date.now();
@@ -472,9 +475,35 @@
             // Recalculate time in real-time (server's value may be stale)
             const scheduled = parseTime(t.scheduledTime);
             const delay = getDelayMinutes(t.trainStatus);
-            const actualTime = new Date(scheduled.getTime() + delay * 60000);
-            const diffMs = actualTime - now;
+            const scheduledTime = scheduled.getTime();
+            
+            // Calculate minutes to scheduled arrival
+            const scheduledMinutesToArrival = Math.floor((scheduledTime - now) / 60000);
+            
+            // Key for storing fixed disappearance time
+            const trainKey = t.trainNr ? `${t.trainNr}_${t.scheduledTime}` : `schedule_${t.scheduledTime}`;
+            
+            // Check if we're 3 minutes or less before scheduled arrival
+            // If yes, and we haven't fixed the disappearance time yet, fix it now
+            let disappearanceTime = null;
+            if (scheduledMinutesToArrival <= 3) {
+              if (!fixedDisappearanceTimesRef.current.has(trainKey)) {
+                // Fix disappearance time = scheduled time + current delay
+                const fixedTime = scheduledTime + delay * 60000;
+                fixedDisappearanceTimesRef.current.set(trainKey, fixedTime);
+              }
+              disappearanceTime = fixedDisappearanceTimesRef.current.get(trainKey);
+            } else {
+              // More than 3 minutes before arrival - no fixed time yet
+              disappearanceTime = scheduledTime + delay * 60000;
+            }
+            
+            const actualTime = new Date(disappearanceTime);
+            const diffMs = actualTime.getTime() - now;
             const minutesToDeparture = Math.max(0, Math.floor(diffMs / 60000));
+            
+            // Check if train should be shown (no 2-minute buffer)
+            const shouldShow = now < disappearanceTime;
 
             return {
               id: t.trainNr || `schedule-${t.scheduledTime}`, // Use scheduledTime as ID for trains without number
@@ -484,10 +513,11 @@
               delayMinutes: delay,
               isDelayed: delay > 0,
               trainNr: t.trainNr,
-              isUrgent: minutesToDeparture >= 0 && minutesToDeparture <= 14
+              isUrgent: minutesToDeparture >= 0 && minutesToDeparture <= 14,
+              shouldShow
             };
           })
-          .filter(t => t.minutesToDeparture >= -2) // Keep trains that departed less than 2 minutes ago (in case of delays)
+          .filter(t => t.shouldShow) // Only show trains that haven't reached their disappearance time
           // Remove duplicates: by train number if exists, otherwise by scheduledTime
           .reduce((acc, train) => {
             if (train.trainNr) {

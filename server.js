@@ -11,6 +11,10 @@ const PORT = 3001;
 app.use(cors());
 app.use(express.static('public'));
 
+// Store fixed disappearance times for trains
+// Key: trainNr_scheduledTime, Value: fixed disappearance time (Date)
+const fixedDisappearanceTimes = new Map();
+
 // HTTPS Agent to ignore SSL errors
 const agent = new https.Agent({
     rejectUnauthorized: false
@@ -480,8 +484,8 @@ app.get('/api/trains', async (req, res) => {
                     });
                 }
                 
-                // Find future schedule times (for trains without live data)
-                const futureScheduleTimes = allScheduleTimes.filter(st => st.minutesToDeparture >= -2);
+                // Filter out trains that have already passed (no 2-minute buffer)
+                const futureScheduleTimes = allScheduleTimes.filter(st => st.minutesToDeparture > 0);
                 console.log(`📅 Found ${futureScheduleTimes.length} future schedule times (out of ${allScheduleTimes.length} total)`);
                 
                 // Match trains to schedule times: nearest train to station = nearest schedule time
@@ -517,6 +521,28 @@ app.get('/api/trains', async (req, res) => {
                         const actualDepartureTime = new Date(departureTime.getTime() + delayMinutes * 60000);
                         const stationsRemaining = liveData.stationsRemaining;
                         
+                        // Calculate minutes to scheduled arrival
+                        const scheduledMinutesToArrival = Math.round((departureTime - now) / 60000);
+                        
+                        // Key for storing fixed disappearance time
+                        const trainKey = `${trainNr}_${scheduledTimeStr}`;
+                        
+                        // Check if we're 3 minutes or less before scheduled arrival
+                        // If yes, and we haven't fixed the disappearance time yet, fix it now
+                        let disappearanceTime = null;
+                        if (scheduledMinutesToArrival <= 3) {
+                            if (!fixedDisappearanceTimes.has(trainKey)) {
+                                // Fix disappearance time = scheduled time + current delay
+                                const fixedTime = new Date(departureTime.getTime() + delayMinutes * 60000);
+                                fixedDisappearanceTimes.set(trainKey, fixedTime);
+                                console.log(`🔒 Fixed disappearance time for train ${trainNr} (${scheduledTimeStr}): ${fixedTime.toLocaleTimeString()} (delay was ${delayMinutes}min)`);
+                            }
+                            disappearanceTime = fixedDisappearanceTimes.get(trainKey);
+                        } else {
+                            // More than 3 minutes before arrival - no fixed time yet
+                            disappearanceTime = actualDepartureTime;
+                        }
+                        
                         let actualMinutesToDeparture = 0;
                         if (stationsRemaining === 0) {
                             const scheduledMinutesToDeparture = Math.round((departureTime - now) / 60000);
@@ -528,12 +554,8 @@ app.get('/api/trains', async (req, res) => {
                             actualMinutesToDeparture = Math.max(0, Math.min(etaFromPosition, delayedMinutesToDeparture));
                         }
                         
-                        // Show train if actual departure time (scheduled + delay) hasn't passed yet, 
-                        // or if it passed less than 2 minutes ago (buffer for API update delays)
-                        // Example: If scheduled 19:17 with 4min delay, actualDeparture = 19:21
-                        // Show until 19:21, then hide after 19:23 (2min buffer)
-                        const timeSinceActualDeparture = (now - actualDepartureTime) / 60000; // minutes since actual departure
-                        const shouldShow = actualDepartureTime > now || timeSinceActualDeparture <= 2;
+                        // Show train if current time is before the disappearance time (no 2-minute buffer)
+                        const shouldShow = now < disappearanceTime;
                         
                         if (shouldShow) {
                             console.log(`  📤 Adding matched train: trainNr=${trainNr}, scheduledTime=${scheduledTimeStr}, actualDeparture=${actualDepartureTime.toLocaleTimeString()}, minutesToDeparture=${actualMinutesToDeparture}, timeSinceDeparture=${timeSinceActualDeparture > 0 ? Math.round(timeSinceActualDeparture) + 'min ago' : 'not yet'}`);
@@ -805,8 +827,8 @@ app.get('/api/trains', async (req, res) => {
         // Sort by actual departure time (scheduled + delay)
         results.sort((a, b) => a.minutesToDeparture - b.minutesToDeparture);
         
-        // Filter out trains that have already departed (more than 2 minutes ago)
-        const activeTrains = results.filter(t => t.minutesToDeparture >= -2);
+        // Filter out trains that have already departed (no 2-minute buffer)
+        const activeTrains = results.filter(t => t.minutesToDeparture > 0);
         
         // Limit to next 4 trains
         return res.json(activeTrains.slice(0, 4));

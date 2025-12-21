@@ -228,6 +228,10 @@ async function fetchCPSchedule(fromId, toId, date) {
     return null;
 }
 
+// Store fixed disappearance times for trains
+// Key: trainNr_scheduledTime, Value: fixed disappearance time (Date)
+const fixedDisappearanceTimes = new Map();
+
 // Main handler function for Vercel
 module.exports = async (req, res) => {
     // Enable CORS
@@ -369,7 +373,8 @@ module.exports = async (req, res) => {
                 });
             }
             
-            const futureScheduleTimes = allScheduleTimes.filter(st => st.minutesToDeparture >= -2);
+                // Filter out trains that have already passed (no 2-minute buffer)
+                const futureScheduleTimes = allScheduleTimes.filter(st => st.minutesToDeparture > 0);
             
             // Match live trains to schedule times
             for (const liveData of availableLiveTrains) {
@@ -398,6 +403,28 @@ module.exports = async (req, res) => {
                     const actualDepartureTime = new Date(departureTime.getTime() + delayMinutes * 60000);
                     const stationsRemaining = liveData.stationsRemaining;
                     
+                    // Calculate minutes to scheduled arrival
+                    const scheduledMinutesToArrival = Math.round((departureTime - now) / 60000);
+                    
+                    // Key for storing fixed disappearance time
+                    const trainKey = `${trainNr}_${scheduledTimeStr}`;
+                    
+                    // Check if we're 3 minutes or less before scheduled arrival
+                    // If yes, and we haven't fixed the disappearance time yet, fix it now
+                    let disappearanceTime = null;
+                    if (scheduledMinutesToArrival <= 3) {
+                        if (!fixedDisappearanceTimes.has(trainKey)) {
+                            // Fix disappearance time = scheduled time + current delay
+                            const fixedTime = new Date(departureTime.getTime() + delayMinutes * 60000);
+                            fixedDisappearanceTimes.set(trainKey, fixedTime);
+                            console.log(`🔒 Fixed disappearance time for train ${trainNr} (${scheduledTimeStr}): ${fixedTime.toLocaleTimeString()} (delay was ${delayMinutes}min)`);
+                        }
+                        disappearanceTime = fixedDisappearanceTimes.get(trainKey);
+                    } else {
+                        // More than 3 minutes before arrival - no fixed time yet
+                        disappearanceTime = actualDepartureTime;
+                    }
+                    
                     let actualMinutesToDeparture = 0;
                     if (stationsRemaining === 0) {
                         const scheduledMinutesToDeparture = Math.round((departureTime - now) / 60000);
@@ -409,8 +436,8 @@ module.exports = async (req, res) => {
                         actualMinutesToDeparture = Math.max(0, Math.min(etaFromPosition, delayedMinutesToDeparture));
                     }
                     
-                    const timeSinceActualDeparture = (now - actualDepartureTime) / 60000;
-                    const shouldShow = actualDepartureTime > now || timeSinceActualDeparture <= 2;
+                    // Show train if current time is before the disappearance time (no 2-minute buffer)
+                    const shouldShow = now < disappearanceTime;
                     
                     if (shouldShow) {
                         results.push({
