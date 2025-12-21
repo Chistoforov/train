@@ -81,13 +81,16 @@ const STATIC_SCHEDULE_CASCAIS_TO_CAIS_DAILY = [
 ];
 
 // Additional weekday-only schedule (Monday-Friday) for Carcavelos -> Cais do Sodré
-// Morning peak: 07:22, 07:34, 07:46, 07:58, 08:22, 08:34, 08:46, 08:58
-// Evening peak: 16:22, 16:34, 16:46, 16:58, 17:22, 17:34, 17:46, 17:58, 18:22, 18:34, 18:46, 18:58, 19:22, 19:34, 19:46, 19:58, 20:22
+// Morning: 05:43, 06:13, 06:43, 07:04, 07:19, 07:34, 07:49, 08:04, 08:19, 08:34, 08:49, 09:04, 09:19, 09:34, 09:49, 10:04, 10:17, 10:37, 10:57, 11:17, 11:37, 11:57
+// Midday: every 20 minutes until 16:57 (12:17, 12:37, 12:57, 13:17, 13:37, 13:57, 14:17, 14:37, 14:57, 15:17, 15:37, 15:57, 16:17, 16:37, 16:57)
+// Evening peak: 17:19, 17:34, 17:49, 18:04, 18:19, 18:34, 18:49, 19:04, 19:19, 19:34, 19:49, 20:04, 20:19, 20:34
+// Late evening: 20:53, 21:13, 21:43
 const STATIC_SCHEDULE_CASCAIS_TO_CAIS_WEEKDAYS = [
-    '07:22', '07:34', '07:46', '07:58', '08:22', '08:34', '08:46', '08:58',
-    '16:22', '16:34', '16:46', '16:58', '17:22', '17:34', '17:46', '17:58',
-    '18:22', '18:34', '18:46', '18:58', '19:22', '19:34', '19:46', '19:58',
-    '20:22'
+    '05:43', '06:13', '06:43', '07:04', '07:19', '07:34', '07:49', '08:04', '08:19', '08:34', '08:49',
+    '09:04', '09:19', '09:34', '09:49', '10:04', '10:17', '10:37', '10:57', '11:17', '11:37', '11:57',
+    '12:17', '12:37', '12:57', '13:17', '13:37', '13:57', '14:17', '14:37', '14:57', '15:17', '15:37', '15:57',
+    '16:17', '16:37', '16:57', '17:19', '17:34', '17:49', '18:04', '18:19', '18:34', '18:49',
+    '19:04', '19:19', '19:34', '19:49', '20:04', '20:19', '20:34', '20:53', '21:13', '21:43'
 ];
 
 // Helper function to get schedule based on day of week
@@ -97,10 +100,8 @@ function getScheduleForDay(dailySchedule, weekdaySchedule) {
     const isWeekday = dayOfWeek >= 1 && dayOfWeek <= 5; // Monday to Friday
     
     if (isWeekday) {
-        // Combine daily and weekday schedules, remove duplicates, and sort
-        const combined = [...dailySchedule, ...weekdaySchedule];
-        const unique = [...new Set(combined)];
-        return unique.sort((a, b) => {
+        // Weekday: use only weekday schedule (no combination with daily)
+        return weekdaySchedule.sort((a, b) => {
             const [hA, mA] = a.split(':').map(Number);
             const [hB, mB] = b.split(':').map(Number);
             const timeA = hA * 60 + mA;
