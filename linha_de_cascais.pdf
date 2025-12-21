@@ -1,0 +1,33 @@
+<!doctype html>
+<html lang="pt">
+
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>CP - Comboios de Portugal</title>
+  <link rel="stylesheet" type="text/css" charset="UTF-8" integrity="sha512-0OCvzZyRsIJ9Rg7O1S+Wf9ucukmVhyOg3h5eBG05aeH4NjG78fCEaEX3ofvndmukzENiX24fK5X/jPr6Y8yIdg==" crossorigin="anonymous" referrerpolicy="no-referrer" href="https://cdnjs.cloudflare.com/ajax/libs/slick-carousel/1.6.0/slick.min.css" />
+  <link rel="stylesheet" type="text/css" integrity="sha512-L/EyzxvZCddd652hKB4w2gEaZgCZSOaH0Ia6JoEGysTu27VnWvej5ipuBnru/iDhPWMO0AvwiVd0HHVUHWeDRA==" crossorigin="anonymous" referrerpolicy="no-referrer" href="https://cdnjs.cloudflare.com/ajax/libs/slick-carousel/1.6.0/slick-theme.min.css" />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@100..900&display=swap" rel="stylesheet">
+  <!-- Global Site Tag (gtag.js) - Google Analytics -->
+  <script async src="https://www.googletagmanager.com/gtag/js?id=G-ABCDEF0123"></script>
+  <script type="text/javascript" src="/gtag.js"></script>
+  <script type="module" crossorigin src="/js/index--WyWxFUk.js"></script>
+  <link rel="modulepreload" crossorigin href="/js/vendor-CxskNrMn.js">
+  <link rel="modulepreload" crossorigin href="/js/ui-ZE3FasQ9.js">
+  <link rel="modulepreload" crossorigin href="/js/query-C0cN23ge.js">
+  <link rel="modulepreload" crossorigin href="/js/i18n-D6OptN4j.js">
+  <link rel="modulepreload" crossorigin href="/js/router-BBEUXxEo.js">
+  <link rel="modulepreload" crossorigin href="/js/redux-By8vRTWR.js">
+  <link rel="modulepreload" crossorigin href="/js/utils-Da1RV1wn.js">
+  <link rel="stylesheet" crossorigin href="/css/index-BVUernDL.css">
+<link rel="manifest" href="/manifest.webmanifest">
+<meta name="theme-color" content="#ffffff">
+<link rel="icon" href="/favicon.ico" sizes="48x48">
+<link rel="icon" href="/favicon.svg" sizes="any" type="image/svg+xml">
+<link rel="apple-touch-icon" href="/apple-touch-icon-180x180.png"></head>
+
+<body>
+  <div id="root"> </div>
+</body>
+
+</html>
