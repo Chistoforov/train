@@ -6,7 +6,7 @@
       "destination": "/api/trains.js"
     },
     {
-      "source": "/((?!api/|.*\\.(png|jpg|jpeg|gif|svg|ico|css|js|json|woff|woff2|ttf|eot|sw.js)).*)",
+      "source": "/",
       "destination": "/index.html"
     }
   ]
