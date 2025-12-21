@@ -2,12 +2,6 @@
   "version": 2,
   "cleanUrls": true,
   "trailingSlash": false,
-  "rewrites": [
-    {
-      "source": "/api/trains",
-      "destination": "/api/trains.js"
-    }
-  ],
   "routes": [
     {
       "src": "/api/(.*)",
