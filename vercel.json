@@ -1,18 +1,11 @@
 {
   "version": 2,
+  "buildCommand": "echo 'No build needed'",
+  "outputDirectory": ".",
   "rewrites": [
     {
       "source": "/api/trains",
       "destination": "/api/trains.js"
-    }
-  ],
-  "routes": [
-    {
-      "src": "/api/(.*)",
-      "dest": "/api/$1.js"
-    },
-    {
-      "handle": "filesystem"
     }
   ]
 }
