@@ -43,8 +43,10 @@ self.addEventListener('activate', (event) => {
 
 // Fetch event - serve from cache, fallback to network
 self.addEventListener('fetch', (event) => {
+  const url = new URL(event.request.url);
+  
   // API requests - always fetch from network, never cache
-  if (event.request.url.includes('/api/')) {
+  if (url.pathname.startsWith('/api/')) {
     event.respondWith(
       fetch(event.request, {
         cache: 'no-store',
@@ -57,6 +59,25 @@ self.addEventListener('fetch', (event) => {
     return;
   }
 
+  // For navigation requests (HTML pages), always return index.html
+  if (event.request.mode === 'navigate' || 
+      (event.request.method === 'GET' && event.request.headers.get('accept')?.includes('text/html'))) {
+    event.respondWith(
+      caches.match('/index.html')
+        .then((cachedResponse) => {
+          if (cachedResponse) {
+            return cachedResponse;
+          }
+          return fetch('/index.html').catch(() => {
+            // If network fails, try to return cached index.html
+            return caches.match('/index.html');
+          });
+        })
+    );
+    return;
+  }
+
+  // For other resources (CSS, JS, images, etc.)
   event.respondWith(
     caches.match(event.request)
       .then((response) => {
