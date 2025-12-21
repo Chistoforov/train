@@ -1,0 +1,579 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <meta name="theme-color" content="#000000">
+  <meta name="description" content="Real-time train schedule">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <meta name="apple-mobile-web-app-title" content="Trains">
+  <link rel="apple-touch-icon" href="/logo.png">
+  <link rel="manifest" href="/manifest.json">
+  <title>Trains</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --bg: #050505;
+      --card-bg: rgba(255, 255, 255, 0.03);
+      --card-border: rgba(255, 255, 255, 0.08);
+      --text: #ffffff;
+      --text-secondary: #888888;
+      
+      --accent-green: #ccff00; /* Acid Green */
+      --accent-orange: #ff4d00;
+      --accent-blue: #2d6eff;
+      
+      --urgent: #ff4d00;
+      --now: #ff4d00;
+      
+      --glass-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.36);
+    }
+
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+      -webkit-tap-highlight-color: transparent;
+    }
+
+    body {
+      font-family: 'Inter', -apple-system, sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      line-height: 1.5;
+      padding: 24px;
+      padding-top: max(24px, env(safe-area-inset-top));
+      padding-bottom: max(24px, env(safe-area-inset-bottom));
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+    }
+
+    /* Ambient Background blobs */
+    body::before {
+      content: '';
+      position: fixed;
+      top: -10%;
+      left: -10%;
+      width: 60vw;
+      height: 60vw;
+      background: radial-gradient(circle, rgba(45, 110, 255, 0.15) 0%, rgba(0,0,0,0) 70%);
+      border-radius: 50%;
+      z-index: -1;
+      filter: blur(60px);
+    }
+    
+    body::after {
+      content: '';
+      position: fixed;
+      bottom: -10%;
+      right: -10%;
+      width: 60vw;
+      height: 60vw;
+      background: radial-gradient(circle, rgba(204, 255, 0, 0.08) 0%, rgba(0,0,0,0) 70%);
+      border-radius: 50%;
+      z-index: -1;
+      filter: blur(60px);
+    }
+
+    #root {
+      width: 100%;
+      max-width: 440px;
+      position: relative;
+      z-index: 1;
+    }
+
+    .header {
+      margin-bottom: 40px;
+    }
+
+    h1 {
+      font-size: 32px;
+      font-weight: 800;
+      letter-spacing: -1px;
+      margin-bottom: 24px;
+      background: linear-gradient(180deg, #fff 0%, #ccc 100%);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+    }
+
+    /* Segmented Control */
+    .segmented-control {
+      display: flex;
+      background: rgba(255, 255, 255, 0.06);
+      border-radius: 100px;
+      padding: 4px;
+      position: relative;
+      backdrop-filter: blur(10px);
+      border: 1px solid var(--card-border);
+    }
+
+    .segment-btn {
+      flex: 1;
+      border: none;
+      background: transparent;
+      padding: 12px 20px;
+      font-size: 14px;
+      font-weight: 600;
+      color: var(--text-secondary);
+      border-radius: 100px;
+      cursor: pointer;
+      transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+      position: relative;
+      z-index: 2;
+    }
+
+    .segment-btn.active {
+      color: #000;
+      background: #fff;
+      box-shadow: 0 4px 12px rgba(0,0,0,0.2);
+    }
+
+    /* Train List */
+    .train-list {
+      display: flex;
+      flex-direction: column;
+      gap: 16px;
+    }
+
+    .train-card {
+      background: var(--card-bg);
+      border: 1px solid var(--card-border);
+      border-radius: 24px;
+      padding: 24px;
+      backdrop-filter: blur(20px);
+      -webkit-backdrop-filter: blur(20px);
+      transition: transform 0.3s ease, background 0.3s ease;
+      position: relative;
+      overflow: hidden;
+    }
+
+    .train-card:active {
+      transform: scale(0.98);
+    }
+
+    .train-card.urgent {
+      background: rgba(255, 77, 0, 0.08);
+      border-color: rgba(255, 77, 0, 0.3);
+    }
+
+    .train-card.urgent::before {
+      content: '';
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 4px;
+      height: 100%;
+      background: var(--urgent);
+    }
+
+    .card-row {
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-end;
+    }
+
+    .card-top {
+      margin-bottom: 20px;
+    }
+
+    .train-time {
+      font-size: 48px;
+      font-weight: 800;
+      letter-spacing: -2px;
+      line-height: 1;
+      background: linear-gradient(180deg, #fff 20%, #888 100%);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      font-variant-numeric: tabular-nums;
+    }
+
+    .train-countdown {
+      font-size: 16px;
+      font-weight: 600;
+      color: var(--text-secondary);
+      padding: 6px 12px;
+      background: rgba(255,255,255,0.05);
+      border-radius: 12px;
+      font-variant-numeric: tabular-nums;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+
+    .train-countdown.now {
+      color: var(--now);
+      background: rgba(255, 77, 0, 0.1);
+    }
+    
+    .train-countdown.highlight {
+        color: var(--accent-green);
+        background: rgba(204, 255, 0, 0.1);
+    }
+
+    .card-bottom {
+      font-size: 14px;
+      font-weight: 500;
+      color: var(--text-secondary);
+    }
+
+    .platform {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      color: #aaa;
+    }
+    
+    .platform-number {
+        color: #fff;
+        font-weight: 700;
+    }
+
+    .status {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+    
+    .status-dot {
+        width: 6px;
+        height: 6px;
+        border-radius: 50%;
+        background: var(--text-secondary);
+    }
+
+    .status.delayed .status-dot {
+      background: var(--urgent);
+      box-shadow: 0 0 8px var(--urgent);
+    }
+    
+    .status.delayed {
+      color: var(--urgent);
+    }
+
+    .status.on-time .status-dot {
+      background: var(--accent-green);
+      box-shadow: 0 0 8px var(--accent-green);
+    }
+    
+    .status.on-time {
+      color: var(--accent-green);
+    }
+
+    /* States */
+    .state-msg {
+      text-align: center;
+      padding: 60px 20px;
+      color: var(--text-secondary);
+      font-size: 15px;
+      font-weight: 500;
+      background: var(--card-bg);
+      border-radius: 24px;
+      border: 1px dashed var(--card-border);
+    }
+
+    .error-msg {
+      background: rgba(255, 77, 0, 0.1);
+      color: var(--accent-orange);
+      padding: 16px;
+      border-radius: 16px;
+      font-size: 14px;
+      margin-bottom: 24px;
+      text-align: center;
+      border: 1px solid rgba(255, 77, 0, 0.2);
+    }
+    
+    /* Loading Skeleton Animation */
+    @keyframes pulse {
+        0% { opacity: 0.5; }
+        50% { opacity: 0.8; }
+        100% { opacity: 0.5; }
+    }
+    
+    .loading-pulse {
+        animation: pulse 2s infinite ease-in-out;
+    }
+  </style>
+</head>
+<body>
+  <div id="root"></div>
+
+  <!-- React & Babel -->
+  <script crossorigin src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
+  <script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
+  <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+
+  <script type="text/babel">
+    const { useState, useEffect, useMemo, useCallback } = React;
+
+    const STATIONS = {
+      CARCAVELOS: '94-21014',
+      CAIS_DO_SODRE: '94-20006'
+    };
+
+    const DIRECTIONS = {
+      TO_LISBON: {
+        id: 'to_lisbon',
+        label: 'To Lisbon',
+        fromStation: STATIONS.CARCAVELOS,
+      },
+      TO_CARCAVELOS: {
+        id: 'to_carcavelos',
+        label: 'To Carcavelos',
+        fromStation: STATIONS.CAIS_DO_SODRE,
+      }
+    };
+
+    // --- Helpers ---
+
+    function parseTime(timeStr) {
+      const [hours, minutes] = timeStr.split(':').map(Number);
+      const date = new Date();
+      date.setHours(hours, minutes, 0, 0);
+      // If the time has already passed today, assume it's for tomorrow
+      const now = new Date();
+      if (date < now) {
+        date.setDate(date.getDate() + 1);
+      }
+      return date;
+    }
+
+    function getDelayMinutes(trainStatus) {
+      if (!trainStatus || trainStatus === 'P') return 0;
+      const match = trainStatus.match(/\d+/);
+      return match ? parseInt(match[0], 10) : 0;
+    }
+
+    // --- Components ---
+
+    function SegmentedControl({ options, value, onChange }) {
+      return (
+        <div className="segmented-control">
+          {options.map((opt) => (
+            <button
+              key={opt.id}
+              className={`segment-btn ${value === opt.id ? 'active' : ''}`}
+              onClick={() => onChange(opt.id)}
+            >
+              {opt.label}
+            </button>
+          ))}
+        </div>
+      );
+    }
+
+    function TrainCard({ train }) {
+      const {
+        scheduledTime,
+        minutesToDeparture,
+        trainNr,
+        isDelayed,
+        delayMinutes,
+        isUrgent
+      } = train;
+
+      const countdownText = minutesToDeparture === 0 ? 'Now' : `${minutesToDeparture} min`;
+      let countdownClass = 'train-countdown';
+      if (minutesToDeparture === 0) countdownClass += ' now';
+      else if (minutesToDeparture <= 5) countdownClass += ' highlight';
+      
+      // Calculate actual departure time (scheduled + delay)
+      let actualTimeText = '';
+      if (isDelayed && delayMinutes > 0) {
+        const [h, m] = scheduledTime.split(':').map(Number);
+        const scheduledDate = new Date();
+        scheduledDate.setHours(h, m, 0, 0);
+        if (scheduledDate < new Date()) scheduledDate.setDate(scheduledDate.getDate() + 1);
+        
+        const actualDate = new Date(scheduledDate.getTime() + delayMinutes * 60000);
+        const actualHours = actualDate.getHours().toString().padStart(2, '0');
+        const actualMinutes = actualDate.getMinutes().toString().padStart(2, '0');
+        actualTimeText = `${actualHours}:${actualMinutes}`;
+      }
+      
+      return (
+        <div className={`train-card ${isUrgent ? 'urgent' : ''}`}>
+          <div className="card-row card-top">
+            <span className="train-time">{scheduledTime}</span>
+            <div className={countdownClass}>
+               {minutesToDeparture <= 5 && minutesToDeparture > 0 && <span>⚡</span>}
+               {countdownText}
+            </div>
+          </div>
+          <div className="card-row card-bottom">
+            <div className="platform">
+              {trainNr ? (
+                <>Train <span className="platform-number">{trainNr}</span></>
+              ) : null}
+            </div>
+            <div className={`status ${isDelayed ? 'delayed' : 'on-time'}`}>
+              <div className="status-dot"></div>
+              {isDelayed && actualTimeText ? `+${delayMinutes} min • ${actualTimeText}` : (isDelayed ? `+${delayMinutes} min delay` : 'On time')}
+            </div>
+          </div>
+        </div>
+      );
+    }
+
+    function App() {
+      const [directionId, setDirectionId] = useState(DIRECTIONS.TO_LISBON.id);
+      const [rawData, setRawData] = useState([]);
+      const [loading, setLoading] = useState(false);
+      const [error, setError] = useState(null);
+      
+      // Derived state: processed trains
+      const [processedTrains, setProcessedTrains] = useState([]);
+
+      // 1. Fetch Data
+      const fetchTrains = useCallback(async () => {
+        const currentDir = Object.values(DIRECTIONS).find(d => d.id === directionId);
+        if (!currentDir) return;
+
+        setLoading(true);
+        setError(null);
+        
+        try {
+          const res = await fetch(`/api/trains?stationId=${currentDir.fromStation}`);
+          if (!res.ok) throw new Error('Network response was not ok');
+          
+          const data = await res.json();
+          if (Array.isArray(data)) {
+            setRawData(data);
+          } else {
+            console.warn("API returned invalid data format", data);
+            setRawData([]);
+          }
+        } catch (err) {
+          console.error(err);
+          setError('Unable to sync with live data');
+        } finally {
+          setLoading(false);
+        }
+      }, [directionId]);
+
+      // 2. Process Data (Recalculate times)
+      const updateProcessedTrains = useCallback(() => {
+        const now = Date.now();
+        
+        const nextTrains = rawData
+          .map(t => {
+            // Recalculate time in real-time (server's value may be stale)
+            const scheduled = parseTime(t.scheduledTime);
+            const delay = getDelayMinutes(t.trainStatus);
+            const actualTime = new Date(scheduled.getTime() + delay * 60000);
+            const diffMs = actualTime - now;
+            const minutesToDeparture = Math.max(0, Math.floor(diffMs / 60000));
+
+            return {
+              id: t.trainNr || `schedule-${t.scheduledTime}`, // Use scheduledTime as ID for trains without number
+              scheduledTime: t.scheduledTime,
+              actualTime,
+              minutesToDeparture,
+              delayMinutes: delay,
+              isDelayed: delay > 0,
+              trainNr: t.trainNr,
+              isUrgent: minutesToDeparture >= 0 && minutesToDeparture <= 14
+            };
+          })
+          .filter(t => t.minutesToDeparture >= -2) // Keep trains that departed less than 2 minutes ago (in case of delays)
+          // Remove duplicates: by train number if exists, otherwise by scheduledTime
+          .reduce((acc, train) => {
+            if (train.trainNr) {
+              // For trains with number: deduplicate by train number
+              const existing = acc.find(t => t.trainNr === train.trainNr);
+              if (!existing || train.minutesToDeparture < existing.minutesToDeparture) {
+                if (existing) {
+                  const index = acc.indexOf(existing);
+                  acc.splice(index, 1);
+                }
+                acc.push(train);
+              }
+            } else {
+              // For trains without number: deduplicate by scheduledTime
+              const existing = acc.find(t => !t.trainNr && t.scheduledTime === train.scheduledTime);
+              if (!existing) {
+                acc.push(train);
+              }
+            }
+            return acc;
+          }, [])
+          .sort((a, b) => a.minutesToDeparture - b.minutesToDeparture); // Sort by minutes to departure
+
+        // Always show up to 4 trains, but if we have fewer and it's end of day, show what we have
+        const displayTrains = nextTrains.slice(0, 4);
+        
+        setProcessedTrains(displayTrains);
+      }, [rawData]);
+
+      // Effect: Clear data when direction changes
+      useEffect(() => {
+        setRawData([]);
+        setProcessedTrains([]);
+      }, [directionId]);
+
+      // Effect: Fetch on mount and direction change, and every 60s
+      useEffect(() => {
+        fetchTrains();
+        const pollInterval = setInterval(fetchTrains, 60000);
+        return () => clearInterval(pollInterval);
+      }, [fetchTrains]);
+
+      // Effect: Update times every 10s using existing rawData
+      useEffect(() => {
+        updateProcessedTrains(); 
+        const tickInterval = setInterval(updateProcessedTrains, 10000);
+        return () => clearInterval(tickInterval);
+      }, [updateProcessedTrains]);
+
+      return (
+        <div>
+          <header className="header">
+            <h1>Trains</h1>
+            <SegmentedControl
+              options={[DIRECTIONS.TO_LISBON, DIRECTIONS.TO_CARCAVELOS]}
+              value={directionId}
+              onChange={setDirectionId}
+            />
+          </header>
+
+          <main>
+            {error && <div className="error-msg">{error}</div>}
+            
+            {loading && processedTrains.length === 0 ? (
+              <div className="state-msg loading-pulse">Searching signals...</div>
+            ) : processedTrains.length > 0 ? (
+              <div className="train-list">
+                {processedTrains.map(train => (
+                  <TrainCard key={train.id} train={train} />
+                ))}
+              </div>
+            ) : (
+              !loading && <div className="state-msg">No upcoming trains found</div>
+            )}
+          </main>
+        </div>
+      );
+    }
+
+    const root = ReactDOM.createRoot(document.getElementById('root'));
+    root.render(<App />);
+
+    // Register Service Worker for PWA
+    if ('serviceWorker' in navigator) {
+      window.addEventListener('load', () => {
+        navigator.serviceWorker.register('/sw.js')
+          .then((registration) => {
+            console.log('Service Worker registered:', registration);
+          })
+          .catch((error) => {
+            console.log('Service Worker registration failed:', error);
+          });
+      });
+    }
+  </script>
+</body>
+</html>

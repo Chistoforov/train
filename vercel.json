@@ -4,10 +4,6 @@
     {
       "source": "/api/trains",
       "destination": "/api/trains.js"
-    },
-    {
-      "source": "/",
-      "destination": "/index.html"
     }
   ]
 }
