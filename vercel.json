@@ -4,13 +4,10 @@
     {
       "source": "/api/trains",
       "destination": "/api/trains.js"
-    }
-  ],
-  "redirects": [
+    },
     {
-      "source": "/",
-      "destination": "/index.html",
-      "permanent": false
+      "source": "/((?!api/).*)",
+      "destination": "/index.html"
     }
   ]
 }
