@@ -40,30 +40,68 @@ const CASCAIS_LINE = [
 ];
 
 // Static schedule for Cascais Line (Cais do Sodre -> Cascais direction)
-const STATIC_SCHEDULE_CAIS_TO_CASCAIS = [
-    '05:30', '06:00', '06:30',
-    '07:00', '07:15', '07:30', '07:45', '08:00', '08:15', '08:30', '08:45',
-    '09:00', '09:20', '09:40', '10:00', '10:20', '10:40',
-    '11:00', '11:20', '11:40', '12:00', '12:20', '12:40', '13:00', '13:20',
-    '13:40', '14:00', '14:20', '14:40', '15:00', '15:20', '15:40', '16:00',
-    '16:20', '16:40', '17:00', '17:20', '17:40',
-    '18:00', '18:20', '18:40', '19:00', '19:20', '19:40', '20:00', '20:20',
-    '20:40', '21:00', '21:20', '21:40', '22:00', '22:20', '22:40',
-    '23:00', '23:20', '23:40'
+// From Lisbon (Cais do Sodré) to Carcavelos
+const STATIC_SCHEDULE_CAIS_TO_CASCAIS_DAILY = [
+    '05:30', '06:00', '06:30', '07:00', '07:20', '07:40', '08:00', '08:20',
+    '08:40', '09:00', '09:20', '09:40', '10:00', '10:20', '10:40', '11:00',
+    '11:20', '11:40', '12:00', '12:20', '12:40', '13:00', '13:20', '13:40',
+    '14:00', '14:20', '14:40', '15:00', '15:20', '15:40', '16:00', '16:20',
+    '16:40', '17:00', '17:20', '17:40', '18:00', '18:20', '18:40', '19:00',
+    '19:20', '19:40', '20:00', '20:20', '20:40', '21:00', '21:30', '22:00',
+    '22:30', '23:00', '23:30', '00:00', '00:30', '01:00', '01:30'
+];
+
+// Additional weekday-only schedule (Monday-Friday) for Cais do Sodré -> Carcavelos
+const STATIC_SCHEDULE_CAIS_TO_CASCAIS_WEEKDAYS = [
+    '07:12', '07:24', '07:36', '07:48', '08:12', '08:24', '08:36', '08:48',
+    '09:12', '16:12', '16:24', '16:36', '16:48', '17:12', '17:24', '17:36',
+    '17:48', '18:12', '18:24', '18:36', '18:48', '19:12', '19:24', '19:36',
+    '19:48', '20:12'
 ];
 
 // Reverse schedule (Cascais -> Cais do Sodre)
-const STATIC_SCHEDULE_CASCAIS_TO_CAIS = [
-    '05:13', '05:43',
-    '06:13', '06:43', '07:04', '07:19', '07:34', '07:49', '08:04', '08:19',
-    '08:37', '08:57',
-    '09:17', '09:37', '09:57', '10:17', '10:37', '10:57', '11:17', '11:37',
-    '11:57', '12:17', '12:37', '12:57', '13:17', '13:37', '13:57', '14:17',
-    '14:37', '14:57', '15:17', '15:37', '15:57', '16:17', '16:37', '16:57',
-    '17:17', '17:37', '17:57', '18:17', '18:37', '18:57',
-    '19:17', '19:47', '20:17', '20:37', '20:57', '21:17', '21:37', '21:57',
-    '22:17', '22:37', '22:57', '23:17', '23:37'
+// From Carcavelos to Lisbon (Cais do Sodré)
+const STATIC_SCHEDULE_CASCAIS_TO_CAIS_DAILY = [
+    '05:40', '06:10', '06:30', '06:50', '07:10', '07:30', '07:50', '08:10',
+    '08:30', '08:50', '09:10', '09:30', '09:50', '10:10', '10:30', '10:50',
+    '11:10', '11:30', '11:50', '12:10', '12:30', '12:50', '13:10', '13:30',
+    '13:50', '14:10', '14:30', '14:50', '15:10', '15:30', '15:50', '16:10',
+    '16:30', '16:50', '17:10', '17:30', '17:50', '18:10', '18:30', '18:50',
+    '19:10', '19:30', '19:50', '20:10', '20:30', '20:50', '21:10', '21:40',
+    '22:10', '22:40', '23:10', '23:40', '00:10', '00:40', '01:10', '01:40',
+    '02:10'
 ];
+
+// Additional weekday-only schedule (Monday-Friday) for Carcavelos -> Cais do Sodré
+const STATIC_SCHEDULE_CASCAIS_TO_CAIS_WEEKDAYS = [
+    '07:22', '07:34', '07:46', '07:58', '08:22', '08:34', '08:46', '08:58',
+    '09:22', '16:22', '16:34', '16:46', '16:58', '17:22', '17:34', '17:46',
+    '17:58', '18:22', '18:34', '18:46', '18:58', '19:22', '19:34', '19:46',
+    '19:58', '20:22'
+];
+
+// Helper function to get schedule based on day of week
+function getScheduleForDay(dailySchedule, weekdaySchedule) {
+    const now = new Date();
+    const dayOfWeek = now.getDay(); // 0 = Sunday, 1 = Monday, ..., 6 = Saturday
+    const isWeekday = dayOfWeek >= 1 && dayOfWeek <= 5; // Monday to Friday
+    
+    if (isWeekday) {
+        // Combine daily and weekday schedules, remove duplicates, and sort
+        const combined = [...dailySchedule, ...weekdaySchedule];
+        const unique = [...new Set(combined)];
+        return unique.sort((a, b) => {
+            const [hA, mA] = a.split(':').map(Number);
+            const [hB, mB] = b.split(':').map(Number);
+            const timeA = hA * 60 + mA;
+            const timeB = hB * 60 + mB;
+            return timeA - timeB;
+        });
+    } else {
+        // Weekend: only daily schedule
+        return dailySchedule;
+    }
+}
 
 function parseTime(timeStr) {
     const [hours, minutes] = timeStr.split(':').map(Number);
@@ -261,10 +299,18 @@ module.exports = async (req, res) => {
         let stationOffset = 0;
         
         if (stationId === '94-21014') {
-            staticSchedule = STATIC_SCHEDULE_CASCAIS_TO_CAIS;
+            // Carcavelos -> Cais do Sodré
+            staticSchedule = getScheduleForDay(
+                STATIC_SCHEDULE_CASCAIS_TO_CAIS_DAILY,
+                STATIC_SCHEDULE_CASCAIS_TO_CAIS_WEEKDAYS
+            );
             stationOffset = 0;
         } else if (stationId === '94-20006') {
-            staticSchedule = STATIC_SCHEDULE_CAIS_TO_CASCAIS;
+            // Cais do Sodré -> Carcavelos
+            staticSchedule = getScheduleForDay(
+                STATIC_SCHEDULE_CAIS_TO_CASCAIS_DAILY,
+                STATIC_SCHEDULE_CAIS_TO_CASCAIS_WEEKDAYS
+            );
             stationOffset = stationData.minutes;
         }
         

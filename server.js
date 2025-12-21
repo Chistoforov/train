@@ -66,47 +66,68 @@ const CASCAIS_LINE = [
 ];
 
 // Static schedule for Cascais Line (Cais do Sodre -> Cascais direction)
-// Based on actual CP schedule from Google Maps screenshots
-// Pattern: :20, :40, :00 most hours, with variations during peak times
-const STATIC_SCHEDULE_CAIS_TO_CASCAIS = [
-    // Early morning (5-6 AM): every 30 minutes
-    '05:30', '06:00', '06:30',
-    // Morning rush (6-8 AM): every 15 minutes
-    '07:00', '07:15', '07:30', '07:45', '08:00', '08:15', '08:30', '08:45',
-    // Mid-morning (9-10 AM): every 20 minutes
-    '09:00', '09:20', '09:40', '10:00', '10:20', '10:40',
-    // Daytime (10 AM - 5 PM): every 20 minutes (:00, :20, :40)
-    '11:00', '11:20', '11:40', '12:00', '12:20', '12:40', '13:00', '13:20',
-    '13:40', '14:00', '14:20', '14:40', '15:00', '15:20', '15:40', '16:00',
-    '16:20', '16:40', '17:00', '17:20', '17:40',
-    // Evening (5-8 PM): every 20 minutes
-    '18:00', '18:20', '18:40', '19:00', '19:20', '19:40', '20:00', '20:20',
-    '20:40', '21:00', '21:20', '21:40', '22:00', '22:20', '22:40',
-    // Night (9-11 PM): every 20 minutes
-    '23:00', '23:20', '23:40'
+// From Lisbon (Cais do Sodré) to Carcavelos
+const STATIC_SCHEDULE_CAIS_TO_CASCAIS_DAILY = [
+    '05:30', '06:00', '06:30', '07:00', '07:20', '07:40', '08:00', '08:20',
+    '08:40', '09:00', '09:20', '09:40', '10:00', '10:20', '10:40', '11:00',
+    '11:20', '11:40', '12:00', '12:20', '12:40', '13:00', '13:20', '13:40',
+    '14:00', '14:20', '14:40', '15:00', '15:20', '15:40', '16:00', '16:20',
+    '16:40', '17:00', '17:20', '17:40', '18:00', '18:20', '18:40', '19:00',
+    '19:20', '19:40', '20:00', '20:20', '20:40', '21:00', '21:30', '22:00',
+    '22:30', '23:00', '23:30', '00:00', '00:30', '01:00', '01:30'
+];
+
+// Additional weekday-only schedule (Monday-Friday) for Cais do Sodré -> Carcavelos
+const STATIC_SCHEDULE_CAIS_TO_CASCAIS_WEEKDAYS = [
+    '07:12', '07:24', '07:36', '07:48', '08:12', '08:24', '08:36', '08:48',
+    '09:12', '16:12', '16:24', '16:36', '16:48', '17:12', '17:24', '17:36',
+    '17:48', '18:12', '18:24', '18:36', '18:48', '19:12', '19:24', '19:36',
+    '19:48', '20:12'
 ];
 
 // Reverse schedule (Cascais -> Cais do Sodre)
-// Based on Google Maps schedule from Carcavelos to Cais do Sodre
-// Pattern: :17, :37, :57 most hours, with variations during peak times
-const STATIC_SCHEDULE_CASCAIS_TO_CAIS = [
-    // Early morning (5-6 AM): every 30 minutes
-    '05:13', '05:43',
-    // Morning rush (6-8 AM): every 15-21 minutes
-    '06:13', '06:43', '07:04', '07:19', '07:34', '07:49', '08:04', '08:19',
-    // Mid-morning (8-9 AM): every 20 minutes
-    '08:37', '08:57',
-    // Daytime (9 AM - 5 PM): every 20 minutes (:17, :37, :57)
-    '09:17', '09:37', '09:57', '10:17', '10:37', '10:57', '11:17', '11:37',
-    '11:57', '12:17', '12:37', '12:57', '13:17', '13:37', '13:57', '14:17',
-    '14:37', '14:57', '15:17', '15:37', '15:57', '16:17', '16:37', '16:57',
-    // Evening (5-7 PM): every 20 minutes
-    '17:17', '17:37', '17:57', '18:17', '18:37', '18:57',
-    // Late evening (7-9 PM): every 20-30 minutes
-    '19:17', '19:47', '20:17', '20:37', '20:57', '21:17', '21:37', '21:57',
-    // Night (9-11 PM): every 20 minutes
-    '22:17', '22:37', '22:57', '23:17', '23:37'
+// From Carcavelos to Lisbon (Cais do Sodré)
+const STATIC_SCHEDULE_CASCAIS_TO_CAIS_DAILY = [
+    '05:40', '06:10', '06:30', '06:50', '07:10', '07:30', '07:50', '08:10',
+    '08:30', '08:50', '09:10', '09:30', '09:50', '10:10', '10:30', '10:50',
+    '11:10', '11:30', '11:50', '12:10', '12:30', '12:50', '13:10', '13:30',
+    '13:50', '14:10', '14:30', '14:50', '15:10', '15:30', '15:50', '16:10',
+    '16:30', '16:50', '17:10', '17:30', '17:50', '18:10', '18:30', '18:50',
+    '19:10', '19:30', '19:50', '20:10', '20:30', '20:50', '21:10', '21:40',
+    '22:10', '22:40', '23:10', '23:40', '00:10', '00:40', '01:10', '01:40',
+    '02:10'
 ];
+
+// Additional weekday-only schedule (Monday-Friday) for Carcavelos -> Cais do Sodré
+const STATIC_SCHEDULE_CASCAIS_TO_CAIS_WEEKDAYS = [
+    '07:22', '07:34', '07:46', '07:58', '08:22', '08:34', '08:46', '08:58',
+    '09:22', '16:22', '16:34', '16:46', '16:58', '17:22', '17:34', '17:46',
+    '17:58', '18:22', '18:34', '18:46', '18:58', '19:22', '19:34', '19:46',
+    '19:58', '20:22'
+];
+
+// Helper function to get schedule based on day of week
+function getScheduleForDay(dailySchedule, weekdaySchedule) {
+    const now = new Date();
+    const dayOfWeek = now.getDay(); // 0 = Sunday, 1 = Monday, ..., 6 = Saturday
+    const isWeekday = dayOfWeek >= 1 && dayOfWeek <= 5; // Monday to Friday
+    
+    if (isWeekday) {
+        // Combine daily and weekday schedules, remove duplicates, and sort
+        const combined = [...dailySchedule, ...weekdaySchedule];
+        const unique = [...new Set(combined)];
+        return unique.sort((a, b) => {
+            const [hA, mA] = a.split(':').map(Number);
+            const [hB, mB] = b.split(':').map(Number);
+            const timeA = hA * 60 + mA;
+            const timeB = hB * 60 + mB;
+            return timeA - timeB;
+        });
+    } else {
+        // Weekend: only daily schedule
+        return dailySchedule;
+    }
+}
 
 function parseTime(timeStr) {
     const [hours, minutes] = timeStr.split(':').map(Number);
@@ -358,11 +379,17 @@ app.get('/api/trains', async (req, res) => {
                 // Carcavelos - "To Lisbon" means trains going TO Cais (from Cascais)
                 // STATIC_SCHEDULE_CASCAIS_TO_CAIS is already the schedule FROM Carcavelos (departure times)
                 // No offset needed - these are departure times from Carcavelos
-                staticSchedule = STATIC_SCHEDULE_CASCAIS_TO_CAIS;
+                staticSchedule = getScheduleForDay(
+                    STATIC_SCHEDULE_CASCAIS_TO_CAIS_DAILY,
+                    STATIC_SCHEDULE_CASCAIS_TO_CAIS_WEEKDAYS
+                );
                 stationOffset = 0; // These are already departure times from Carcavelos
             } else if (stationId === '94-20006') {
                 // Cais do Sodre - "To Carcavelos" means trains going TO Cascais (from Cais)
-                staticSchedule = STATIC_SCHEDULE_CAIS_TO_CASCAIS;
+                staticSchedule = getScheduleForDay(
+                    STATIC_SCHEDULE_CAIS_TO_CASCAIS_DAILY,
+                    STATIC_SCHEDULE_CAIS_TO_CASCAIS_WEEKDAYS
+                );
                 stationOffset = stationData.minutes; // Minutes from Cais to station (0 for Cais)
             }
             
@@ -685,7 +712,11 @@ app.get('/api/trains', async (req, res) => {
         const results = [];
         
         // Trains going Cais -> Cascais
-        const caisToCascaisSchedule = findNextScheduledTime(now, STATIC_SCHEDULE_CAIS_TO_CASCAIS, stationData.minutes);
+        const caisToCascaisSchedule = findNextScheduledTime(
+            now, 
+            getScheduleForDay(STATIC_SCHEDULE_CAIS_TO_CASCAIS_DAILY, STATIC_SCHEDULE_CAIS_TO_CASCAIS_WEEKDAYS), 
+            stationData.minutes
+        );
         const liveTrainToCascais = liveTrains.find(v => 
             v.destination.code === '94-69260' && 
             v.origin.code === '94-69005'
@@ -727,7 +758,11 @@ app.get('/api/trains', async (req, res) => {
         }
 
         // Trains going Cascais -> Cais
-        const cascaisToCaisSchedule = findNextScheduledTime(now, STATIC_SCHEDULE_CASCAIS_TO_CAIS, 32 - stationData.minutes);
+        const cascaisToCaisSchedule = findNextScheduledTime(
+            now, 
+            getScheduleForDay(STATIC_SCHEDULE_CASCAIS_TO_CAIS_DAILY, STATIC_SCHEDULE_CASCAIS_TO_CAIS_WEEKDAYS), 
+            32 - stationData.minutes
+        );
         const liveTrainToCais = liveTrains.find(v => 
             v.destination.code === '94-69005' && 
             v.origin.code === '94-69260'
