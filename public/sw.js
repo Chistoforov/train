@@ -1,4 +1,4 @@
-const CACHE_NAME = 'carcavelos-trains-v1';
+const CACHE_NAME = 'carcavelos-trains-v2';
 const urlsToCache = [
   '/',
   '/index.html',
