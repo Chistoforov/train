@@ -96,6 +96,18 @@ module.exports = async (req, res) => {
         
         const stationStops = Array.from(allStopsMap.values());
         
+        // Mock train for localhost testing
+        if (req.headers.host && (req.headers.host.includes('localhost') || req.headers.host.includes('127.0.0.1'))) {
+            stationStops.push({
+                trainNumber: '99999',
+                trainDestination: { code: stationId === '94-21014' ? '94-69005' : '94-69260', designation: 'Teste Local' },
+                delay: 5,
+                departureTime: new Date(Date.now() + 10 * 60000).toLocaleTimeString('pt-PT', { hour: '2-digit', minute: '2-digit' }),
+                arrivalTime: new Date(Date.now() + 10 * 60000).toLocaleTimeString('pt-PT', { hour: '2-digit', minute: '2-digit' }),
+                platform: '1'
+            });
+        }
+
         const results = stationStops.map(stop => {
             const destinationCode = stop.trainDestination ? stop.trainDestination.code : '';
             const destinationName = stop.trainDestination ? stop.trainDestination.designation : 'Unknown';

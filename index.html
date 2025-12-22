@@ -8,7 +8,7 @@
   <meta name="apple-mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
   <meta name="apple-mobile-web-app-title" content="Trains">
-  <link rel="apple-touch-icon" href="/logo.png">
+  <link rel="apple-touch-icon" href="/logo.png?v=2">
   <link rel="manifest" href="/manifest.json">
   <title>Trains</title>
   <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -222,13 +222,26 @@
     }
 
     .platform {
+      /* Removed simple flex row style */
+    }
+    
+    .train-details-col {
+      display: flex;
+      flex-direction: column;
+      gap: 2px;
+      align-items: flex-start;
+    }
+
+    .detail-item {
       display: flex;
       align-items: center;
       gap: 6px;
-      color: #aaa;
+      color: var(--text-secondary);
+      font-size: 14px;
+      font-weight: 500;
     }
     
-    .platform-number {
+    .detail-item .value {
         color: #fff;
         font-weight: 700;
     }
@@ -237,6 +250,7 @@
       display: flex;
       align-items: center;
       gap: 6px;
+      padding-bottom: 2px; /* Align visually with the bottom text line */
     }
     
     .status-dot {
@@ -373,7 +387,8 @@
         trainNr,
         isDelayed,
         delayMinutes,
-        isUrgent
+        isUrgent,
+        platform
       } = train;
 
       const countdownText = minutesToDeparture === 0 ? 'Now' : `${minutesToDeparture} min`;
@@ -405,10 +420,17 @@
             </div>
           </div>
           <div className="card-row card-bottom">
-            <div className="platform">
-              {trainNr ? (
-                <>Train <span className="platform-number">{trainNr}</span></>
-              ) : null}
+            <div className="train-details-col">
+              {trainNr && (
+                <div className="detail-item">
+                  Train <span className="value">{trainNr}</span>
+                </div>
+              )}
+              {platform && (
+                 <div className="detail-item">
+                   Platform <span className="value">{platform}</span>
+                 </div>
+              )}
             </div>
             <div className={`status ${isDelayed ? 'delayed' : 'on-time'}`}>
               <div className="status-dot"></div>
@@ -437,7 +459,15 @@
         setError(null);
         
         try {
-          const res = await fetch(`/api/trains?stationId=${currentDir.fromStation}`);
+          // Add timestamp to prevent caching and explicitly disable cache
+          const timestamp = Date.now();
+          const res = await fetch(`/api/trains?stationId=${currentDir.fromStation}&_t=${timestamp}`, {
+            cache: 'no-store',
+            headers: {
+              'Cache-Control': 'no-cache, no-store, must-revalidate',
+              'Pragma': 'no-cache'
+            }
+          });
           if (!res.ok) throw new Error('Network response was not ok');
           
           const data = await res.json();
@@ -506,7 +536,8 @@
               isDelayed: delay > 0,
               trainNr: t.trainNr,
               isUrgent: minutesToDeparture >= 0 && minutesToDeparture <= 14,
-              shouldShow
+              shouldShow,
+              platform: t.platform
             };
           })
           .filter(t => t.shouldShow) // Only show trains that haven't reached their disappearance time
@@ -531,9 +562,9 @@
             }
             return acc;
           }, [])
-          .sort((a, b) => a.minutesToDeparture - b.minutesToDeparture); // Sort by minutes to departure
+          .sort((a, b) => a.minutesToDeparture - b.minutesToDeparture); // Sort by departure time (based on real-time)
 
-        // Always show up to 4 trains, but if we have fewer and it's end of day, show what we have
+        // Always show up to 4 trains
         const displayTrains = nextTrains.slice(0, 4);
         
         setProcessedTrains(displayTrains);
@@ -545,10 +576,10 @@
         setProcessedTrains([]);
       }, [directionId]);
 
-      // Effect: Fetch on mount and direction change, and every 60s
+      // Effect: Fetch on mount and direction change, and every 30s for fresh delay data
       useEffect(() => {
         fetchTrains();
-        const pollInterval = setInterval(fetchTrains, 60000);
+        const pollInterval = setInterval(fetchTrains, 30000); // Update every 30s to catch delays quickly
         return () => clearInterval(pollInterval);
       }, [fetchTrains]);
 

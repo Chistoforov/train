@@ -31,13 +31,10 @@ const CP_API_CONFIG = {
     CONNECT_SECRET: '74bd06d5a2715c64c2f848c5cdb56e6b'
 };
 
-async function fetchStationSchedule(stationId) {
+async function fetchStationSchedule(stationId, timeOffsetMinutes = -10) {
     const today = new Date().toISOString().split('T')[0];
-    // Start from current time minus 30 mins to show recent trains, or just current time
-    // API expects time in HH:MM format
     const now = new Date();
-    // Go back 10 minutes to ensure we don't miss a train that is just departing
-    now.setMinutes(now.getMinutes() - 10);
+    now.setMinutes(now.getMinutes() + timeOffsetMinutes);
     const time = `${now.getHours().toString().padStart(2, '0')}:${now.getMinutes().toString().padStart(2, '0')}`;
     
     const url = `${CP_API_CONFIG.BASE_URL}/stations/${stationId}/timetable/${today}?start=${time}`;
@@ -62,8 +59,7 @@ async function fetchStationSchedule(stationId) {
 
         if (!response.ok) {
             console.error(`CP API Error: ${response.status} ${response.statusText}`);
-            const text = await response.text();
-            console.error('Error body:', text.substring(0, 200));
+            // Don't read text here if we want to return empty array silently or just log status
             return [];
         }
 
@@ -91,7 +87,22 @@ app.get('/api/trains', async (req, res) => {
     const cpStationId = STATION_MAP[stationId];
     
     try {
-        const stationStops = await fetchStationSchedule(cpStationId);
+        // Fetch current trains (using -10 min buffer as before) and future trains (+20 min)
+        const [currentStops, futureStops] = await Promise.all([
+            fetchStationSchedule(cpStationId, -10),
+            fetchStationSchedule(cpStationId, 20)
+        ]);
+        
+        // Merge and deduplicate based on trainNumber
+        const allStopsMap = new Map();
+        
+        [...currentStops, ...futureStops].forEach(stop => {
+            if (stop.trainNumber && !allStopsMap.has(stop.trainNumber)) {
+                allStopsMap.set(stop.trainNumber, stop);
+            }
+        });
+        
+        const stationStops = Array.from(allStopsMap.values());
         
         // Filter and format the data
         const results = stationStops.map(stop => {
@@ -150,8 +161,8 @@ app.get('/api/trains', async (req, res) => {
             // Add delay
             const actualMinutesToDeparture = minutesToDeparture + delayMinutes;
             
-            // Don't show trains that departed more than 2 minutes ago
-            if (actualMinutesToDeparture < -2) return null;
+            // Don't show trains that departed (negative minutes)
+            if (actualMinutesToDeparture < 0) return null;
 
             return {
                 trainNr: stop.trainNumber,

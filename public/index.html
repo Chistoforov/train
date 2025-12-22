@@ -222,13 +222,26 @@
     }
 
     .platform {
+      /* Removed simple flex row style */
+    }
+    
+    .train-details-col {
+      display: flex;
+      flex-direction: column;
+      gap: 2px;
+      align-items: flex-start;
+    }
+
+    .detail-item {
       display: flex;
       align-items: center;
       gap: 6px;
-      color: #aaa;
+      color: var(--text-secondary);
+      font-size: 14px;
+      font-weight: 500;
     }
     
-    .platform-number {
+    .detail-item .value {
         color: #fff;
         font-weight: 700;
     }
@@ -237,6 +250,7 @@
       display: flex;
       align-items: center;
       gap: 6px;
+      padding-bottom: 2px; /* Align visually with the bottom text line */
     }
     
     .status-dot {
@@ -406,15 +420,16 @@
             </div>
           </div>
           <div className="card-row card-bottom">
-            <div className="platform">
-              {trainNr ? (
-                <>Train <span className="platform-number">{trainNr}</span></>
-              ) : null}
+            <div className="train-details-col">
+              {trainNr && (
+                <div className="detail-item">
+                  Train <span className="value">{trainNr}</span>
+                </div>
+              )}
               {platform && (
-                 <>
-                   <span style={{ margin: '0 8px', opacity: 0.3 }}>|</span>
-                   <span>Plat <span className="platform-number">{platform}</span></span>
-                 </>
+                 <div className="detail-item">
+                   Platform <span className="value">{platform}</span>
+                 </div>
               )}
             </div>
             <div className={`status ${isDelayed ? 'delayed' : 'on-time'}`}>
