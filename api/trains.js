@@ -20,10 +20,11 @@ const CP_API_CONFIG = {
     CONNECT_SECRET: '74bd06d5a2715c64c2f848c5cdb56e6b'
 };
 
-async function fetchStationSchedule(stationId) {
-    const today = new Date().toISOString().split('T')[0];
+async function fetchStationSchedule(stationId, timeOffsetMinutes = -10) {
     const now = new Date();
-    now.setMinutes(now.getMinutes() - 10);
+    now.setMinutes(now.getMinutes() + timeOffsetMinutes);
+    
+    const today = now.toISOString().split('T')[0];
     const time = `${now.getHours().toString().padStart(2, '0')}:${now.getMinutes().toString().padStart(2, '0')}`;
     
     const url = `${CP_API_CONFIG.BASE_URL}/stations/${stationId}/timetable/${today}?start=${time}`;
@@ -78,7 +79,22 @@ module.exports = async (req, res) => {
     const cpStationId = STATION_MAP[stationId];
     
     try {
-        const stationStops = await fetchStationSchedule(cpStationId);
+        // Fetch current trains (using -10 min buffer as before) and future trains (+20 min)
+        const [currentStops, futureStops] = await Promise.all([
+            fetchStationSchedule(cpStationId, -10),
+            fetchStationSchedule(cpStationId, 20)
+        ]);
+        
+        // Merge and deduplicate based on trainNumber
+        const allStopsMap = new Map();
+        
+        [...currentStops, ...futureStops].forEach(stop => {
+            if (stop.trainNumber && !allStopsMap.has(stop.trainNumber)) {
+                allStopsMap.set(stop.trainNumber, stop);
+            }
+        });
+        
+        const stationStops = Array.from(allStopsMap.values());
         
         const results = stationStops.map(stop => {
             const destinationCode = stop.trainDestination ? stop.trainDestination.code : '';
@@ -108,7 +124,8 @@ module.exports = async (req, res) => {
             let minutesToDeparture = Math.round((scheduledDate - now) / 60000);
             const actualMinutesToDeparture = minutesToDeparture + delayMinutes;
             
-            if (actualMinutesToDeparture < -2) return null;
+            // Filter out trains that have already departed (negative minutes)
+            if (actualMinutesToDeparture < 0) return null;
 
             return {
                 trainNr: stop.trainNumber,
