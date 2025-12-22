@@ -373,7 +373,8 @@
         trainNr,
         isDelayed,
         delayMinutes,
-        isUrgent
+        isUrgent,
+        platform
       } = train;
 
       const countdownText = minutesToDeparture === 0 ? 'Now' : `${minutesToDeparture} min`;
@@ -409,6 +410,12 @@
               {trainNr ? (
                 <>Train <span className="platform-number">{trainNr}</span></>
               ) : null}
+              {platform && (
+                 <>
+                   <span style={{ margin: '0 8px', opacity: 0.3 }}>|</span>
+                   <span>Plat <span className="platform-number">{platform}</span></span>
+                 </>
+              )}
             </div>
             <div className={`status ${isDelayed ? 'delayed' : 'on-time'}`}>
               <div className="status-dot"></div>
@@ -514,7 +521,8 @@
               isDelayed: delay > 0,
               trainNr: t.trainNr,
               isUrgent: minutesToDeparture >= 0 && minutesToDeparture <= 14,
-              shouldShow
+              shouldShow,
+              platform: t.platform
             };
           })
           .filter(t => t.shouldShow) // Only show trains that haven't reached their disappearance time
