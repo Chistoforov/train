@@ -485,8 +485,8 @@
         }
       }, [directionId]);
 
-      // Store fixed disappearance times on client side
-      const fixedDisappearanceTimesRef = useRef(new Map());
+      // Store fixed disappearance times on client side - REMOVED (logic simplified)
+      // const fixedDisappearanceTimesRef = useRef(new Map());
       
       // 2. Process Data (Recalculate times)
       const updateProcessedTrains = useCallback(() => {
@@ -502,23 +502,9 @@
             // Calculate minutes to scheduled arrival
             const scheduledMinutesToArrival = Math.floor((scheduledTime - now) / 60000);
             
-            // Key for storing fixed disappearance time
-            const trainKey = t.trainNr ? `${t.trainNr}_${t.scheduledTime}` : `schedule_${t.scheduledTime}`;
-            
-            // Check if we're 3 minutes or less before scheduled arrival
-            // If yes, and we haven't fixed the disappearance time yet, fix it now
-            let disappearanceTime = null;
-            if (scheduledMinutesToArrival <= 3) {
-              if (!fixedDisappearanceTimesRef.current.has(trainKey)) {
-                // Fix disappearance time = scheduled time + current delay
-                const fixedTime = scheduledTime + delay * 60000;
-                fixedDisappearanceTimesRef.current.set(trainKey, fixedTime);
-              }
-              disappearanceTime = fixedDisappearanceTimesRef.current.get(trainKey);
-            } else {
-              // More than 3 minutes before arrival - no fixed time yet
-              disappearanceTime = scheduledTime + delay * 60000;
-            }
+            // Calculate disappearance time based on latest schedule + delay
+            // Always use the latest information to ensure late trains remain visible
+            const disappearanceTime = scheduledTime + delay * 60000;
             
             const actualTime = new Date(disappearanceTime);
             const diffMs = actualTime.getTime() - now;
