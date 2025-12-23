@@ -9,7 +9,7 @@ const app = express();
 const PORT = 3001;
 
 app.use(cors());
-app.use(express.static('public'));
+app.use(express.static(path.join(__dirname, 'public')));
 
 // HTTPS Agent to ignore SSL errors
 const agent = new https.Agent({
@@ -195,6 +195,11 @@ app.get('/api/trains', async (req, res) => {
         console.error('Handler error:', error);
         res.status(500).json({ error: 'Internal server error' });
     }
+});
+
+// Handle SPA routing - serve index.html for all other routes
+app.get('*', (req, res) => {
+    res.sendFile(path.join(__dirname, 'public', 'index.html'));
 });
 
 app.listen(PORT, () => {
