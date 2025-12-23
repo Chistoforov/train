@@ -19,6 +19,7 @@
       --bg: #050505;
       --card-bg: rgba(255, 255, 255, 0.03);
       --card-border: rgba(255, 255, 255, 0.08);
+      --input-bg: rgba(255, 255, 255, 0.06);
       --text: #ffffff;
       --text-secondary: #888888;
       
@@ -44,12 +45,11 @@
       background: var(--bg);
       color: var(--text);
       line-height: 1.5;
-      /* Padding moved to #root and .header for sticky positioning */
       min-height: 100vh;
       display: flex;
       flex-direction: column;
       align-items: center;
-      overscroll-behavior-y: none; /* Prevent elastic scrolling/bounce */
+      overscroll-behavior-y: none;
     }
 
     /* Ambient Background blobs */
@@ -98,7 +98,6 @@
       padding-bottom: 24px;
       margin-bottom: 16px;
       
-      /* Extend to full width of #root padding */
       margin-left: -24px;
       margin-right: -24px;
       padding-left: 24px;
@@ -110,46 +109,86 @@
       border-bottom: 1px solid rgba(255,255,255,0.05);
     }
 
-    h1 {
-      font-size: 32px;
-      font-weight: 800;
-      letter-spacing: -1px;
-      margin-bottom: 24px;
-      background: linear-gradient(180deg, #fff 0%, #ccc 100%);
-      -webkit-background-clip: text;
-      -webkit-text-fill-color: transparent;
+    /* Route Selector */
+    .route-selector {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      margin-bottom: 0;
     }
 
-    /* Segmented Control */
-    .segmented-control {
-      display: flex;
-      background: rgba(255, 255, 255, 0.06);
-      border-radius: 100px;
-      padding: 4px;
+    .station-select-wrapper {
+      flex: 1;
       position: relative;
-      backdrop-filter: blur(10px);
+      background: var(--input-bg);
+      border-radius: 16px;
+      transition: all 0.2s ease;
       border: 1px solid var(--card-border);
     }
 
-    .segment-btn {
-      flex: 1;
-      border: none;
-      background: transparent;
-      padding: 12px 20px;
-      font-size: 14px;
-      font-weight: 600;
-      color: var(--text-secondary);
-      border-radius: 100px;
-      cursor: pointer;
-      transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-      position: relative;
-      z-index: 2;
+    .station-select-wrapper:focus-within {
+      background: rgba(255,255,255,0.1);
+      border-color: rgba(255,255,255,0.2);
     }
 
-    .segment-btn.active {
-      color: #000;
-      background: #fff;
-      box-shadow: 0 4px 12px rgba(0,0,0,0.2);
+    .station-select-label {
+      position: absolute;
+      top: 6px;
+      left: 12px;
+      font-size: 10px;
+      font-weight: 600;
+      color: var(--text-secondary);
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+      pointer-events: none;
+    }
+
+    .station-select {
+      width: 100%;
+      height: 56px;
+      padding: 20px 12px 6px 12px; /* Top padding for label space */
+      background: transparent;
+      border: none;
+      color: var(--text);
+      font-size: 15px;
+      font-weight: 600;
+      font-family: inherit;
+      appearance: none;
+      -webkit-appearance: none;
+      outline: none;
+      cursor: pointer;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+
+    /* Swap Button */
+    .swap-btn {
+      width: 44px;
+      height: 44px;
+      flex-shrink: 0;
+      border-radius: 50%;
+      background: var(--input-bg);
+      border: 1px solid var(--card-border);
+      color: var(--text-secondary);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      cursor: pointer;
+      transition: all 0.2s ease;
+    }
+
+    .swap-btn:active {
+      transform: scale(0.92);
+      background: rgba(255,255,255,0.1);
+      color: var(--text);
+    }
+
+    /* Icons */
+    .icon-swap {
+      width: 20px;
+      height: 20px;
+      fill: currentColor;
     }
 
     /* Train List */
@@ -239,10 +278,6 @@
       font-weight: 500;
       color: var(--text-secondary);
     }
-
-    .platform {
-      /* Removed simple flex row style */
-    }
     
     .train-details-col {
       display: flex;
@@ -269,7 +304,7 @@
       display: flex;
       align-items: center;
       gap: 6px;
-      padding-bottom: 2px; /* Align visually with the bottom text line */
+      padding-bottom: 2px;
     }
     
     .status-dot {
@@ -320,7 +355,6 @@
       border: 1px solid rgba(255, 77, 0, 0.2);
     }
     
-    /* Loading Skeleton Animation */
     @keyframes pulse {
         0% { opacity: 0.5; }
         50% { opacity: 0.8; }
@@ -343,31 +377,12 @@
   <script type="text/babel">
     const { useState, useEffect, useMemo, useCallback, useRef } = React;
 
-    const STATIONS = {
-      CARCAVELOS: '94-21014',
-      CAIS_DO_SODRE: '94-20006'
-    };
-
-    const DIRECTIONS = {
-      TO_LISBON: {
-        id: 'to_lisbon',
-        label: 'To Lisbon',
-        fromStation: STATIONS.CARCAVELOS,
-      },
-      TO_CARCAVELOS: {
-        id: 'to_carcavelos',
-        label: 'To Carcavelos',
-        fromStation: STATIONS.CAIS_DO_SODRE,
-      }
-    };
-
     // --- Helpers ---
 
     function parseTime(timeStr) {
       const [hours, minutes] = timeStr.split(':').map(Number);
       const date = new Date();
       date.setHours(hours, minutes, 0, 0);
-      // If the time has already passed today, assume it's for tomorrow
       const now = new Date();
       if (date < now) {
         date.setDate(date.getDate() + 1);
@@ -383,18 +398,40 @@
 
     // --- Components ---
 
-    function SegmentedControl({ options, value, onChange }) {
+    function RouteSelector({ stations, fromStation, toStation, onFromChange, onToChange, onSwap }) {
       return (
-        <div className="segmented-control">
-          {options.map((opt) => (
-            <button
-              key={opt.id}
-              className={`segment-btn ${value === opt.id ? 'active' : ''}`}
-              onClick={() => onChange(opt.id)}
+        <div className="route-selector">
+          <div className="station-select-wrapper">
+            <span className="station-select-label">From</span>
+            <select 
+              className="station-select"
+              value={fromStation}
+              onChange={(e) => onFromChange(e.target.value)}
             >
-              {opt.label}
-            </button>
-          ))}
+              {stations.map(st => (
+                <option key={st.id} value={st.id}>{st.name}</option>
+              ))}
+            </select>
+          </div>
+
+          <button className="swap-btn" onClick={onSwap} aria-label="Swap directions">
+            <svg className="icon-swap" viewBox="0 0 24 24">
+              <path d="M6.99 11L3 15l3.99 4v-3H14v-2H6.99v-3zM21 9l-3.99-4v3H10v2h7.01v3L21 9z"/>
+            </svg>
+          </button>
+
+          <div className="station-select-wrapper">
+            <span className="station-select-label">To</span>
+            <select 
+              className="station-select"
+              value={toStation}
+              onChange={(e) => onToChange(e.target.value)}
+            >
+              {stations.map(st => (
+                <option key={st.id} value={st.id}>{st.name}</option>
+              ))}
+            </select>
+          </div>
         </div>
       );
     }
@@ -415,7 +452,6 @@
       if (minutesToDeparture === 0) countdownClass += ' now';
       else if (minutesToDeparture <= 5) countdownClass += ' highlight';
       
-      // Calculate actual departure time (scheduled + delay)
       let actualTimeText = '';
       if (isDelayed && delayMinutes > 0) {
         const [h, m] = scheduledTime.split(':').map(Number);
@@ -461,26 +497,39 @@
     }
 
     function App() {
-      const [directionId, setDirectionId] = useState(DIRECTIONS.TO_LISBON.id);
+      // Default: Carcavelos (94-69187) -> Cais do Sodre (94-69005)
+      // Note: Using real IDs directly. server.js maps these correctly.
+      const [fromStation, setFromStation] = useState('94-69187');
+      const [toStation, setToStation] = useState('94-69005');
+      
+      const [stations, setStations] = useState([]);
       const [rawData, setRawData] = useState([]);
       const [loading, setLoading] = useState(false);
       const [error, setError] = useState(null);
-      
-      // Derived state: processed trains
       const [processedTrains, setProcessedTrains] = useState([]);
 
-      // 1. Fetch Data
+      // 1. Fetch Stations
+      useEffect(() => {
+        fetch('/api/stations')
+          .then(res => res.json())
+          .then(data => {
+            if (Array.isArray(data)) {
+              setStations(data);
+            }
+          })
+          .catch(err => console.error("Failed to load stations", err));
+      }, []);
+
+      // 2. Fetch Trains
       const fetchTrains = useCallback(async () => {
-        const currentDir = Object.values(DIRECTIONS).find(d => d.id === directionId);
-        if (!currentDir) return;
+        if (!fromStation || !toStation) return;
 
         setLoading(true);
         setError(null);
         
         try {
-          // Add timestamp to prevent caching and explicitly disable cache
           const timestamp = Date.now();
-          const res = await fetch(`/api/trains?stationId=${currentDir.fromStation}&_t=${timestamp}`, {
+          const res = await fetch(`/api/trains?stationId=${fromStation}&toStationId=${toStation}&_t=${timestamp}`, {
             cache: 'no-store',
             headers: {
               'Cache-Control': 'no-cache, no-store, must-revalidate',
@@ -493,7 +542,6 @@
           if (Array.isArray(data)) {
             setRawData(data);
           } else {
-            console.warn("API returned invalid data format", data);
             setRawData([]);
           }
         } catch (err) {
@@ -502,38 +550,26 @@
         } finally {
           setLoading(false);
         }
-      }, [directionId]);
+      }, [fromStation, toStation]);
 
-      // Store fixed disappearance times on client side - REMOVED (logic simplified)
-      // const fixedDisappearanceTimesRef = useRef(new Map());
-      
-      // 2. Process Data (Recalculate times)
+      // 3. Process Data
       const updateProcessedTrains = useCallback(() => {
         const now = Date.now();
         
         const nextTrains = rawData
           .map(t => {
-            // Recalculate time in real-time (server's value may be stale)
             const scheduled = parseTime(t.scheduledTime);
             const delay = getDelayMinutes(t.trainStatus);
             const scheduledTime = scheduled.getTime();
             
-            // Calculate minutes to scheduled arrival
-            const scheduledMinutesToArrival = Math.floor((scheduledTime - now) / 60000);
-            
-            // Calculate disappearance time based on latest schedule + delay
-            // Always use the latest information to ensure late trains remain visible
             const disappearanceTime = scheduledTime + delay * 60000;
-            
             const actualTime = new Date(disappearanceTime);
             const diffMs = actualTime.getTime() - now;
             const minutesToDeparture = Math.max(0, Math.floor(diffMs / 60000));
-            
-            // Check if train should be shown (no 2-minute buffer)
             const shouldShow = now < disappearanceTime;
 
             return {
-              id: t.trainNr || `schedule-${t.scheduledTime}`, // Use scheduledTime as ID for trains without number
+              id: t.trainNr || `schedule-${t.scheduledTime}`,
               scheduledTime: t.scheduledTime,
               actualTime,
               minutesToDeparture,
@@ -545,63 +581,52 @@
               platform: t.platform
             };
           })
-          .filter(t => t.shouldShow) // Only show trains that haven't reached their disappearance time
-          // Remove duplicates: by train number if exists, otherwise by scheduledTime
+          .filter(t => t.shouldShow)
           .reduce((acc, train) => {
             if (train.trainNr) {
-              // For trains with number: deduplicate by train number
               const existing = acc.find(t => t.trainNr === train.trainNr);
               if (!existing || train.minutesToDeparture < existing.minutesToDeparture) {
-                if (existing) {
-                  const index = acc.indexOf(existing);
-                  acc.splice(index, 1);
-                }
+                if (existing) acc.splice(acc.indexOf(existing), 1);
                 acc.push(train);
               }
             } else {
-              // For trains without number: deduplicate by scheduledTime
               const existing = acc.find(t => !t.trainNr && t.scheduledTime === train.scheduledTime);
-              if (!existing) {
-                acc.push(train);
-              }
+              if (!existing) acc.push(train);
             }
             return acc;
           }, [])
-          .sort((a, b) => a.minutesToDeparture - b.minutesToDeparture); // Sort by minutes to departure
+          .sort((a, b) => a.minutesToDeparture - b.minutesToDeparture);
 
-        // Always show up to 4 trains, but if we have fewer and it's end of day, show what we have
-        const displayTrains = nextTrains.slice(0, 4);
-        
-        setProcessedTrains(displayTrains);
+        setProcessedTrains(nextTrains.slice(0, 4));
       }, [rawData]);
 
-      // Effect: Clear data when direction changes
-      useEffect(() => {
-        setRawData([]);
-        setProcessedTrains([]);
-      }, [directionId]);
-
-      // Effect: Fetch on mount and direction change, and every 30s for fresh delay data
       useEffect(() => {
         fetchTrains();
-        const pollInterval = setInterval(fetchTrains, 30000); // Update every 30s to catch delays quickly
+        const pollInterval = setInterval(fetchTrains, 30000);
         return () => clearInterval(pollInterval);
       }, [fetchTrains]);
 
-      // Effect: Update times every 10s using existing rawData
       useEffect(() => {
         updateProcessedTrains(); 
         const tickInterval = setInterval(updateProcessedTrains, 10000);
         return () => clearInterval(tickInterval);
       }, [updateProcessedTrains]);
 
+      const handleSwap = () => {
+        setFromStation(toStation);
+        setToStation(fromStation);
+      };
+
       return (
         <div>
           <header className="header">
-            <SegmentedControl
-              options={[DIRECTIONS.TO_LISBON, DIRECTIONS.TO_CARCAVELOS]}
-              value={directionId}
-              onChange={setDirectionId}
+            <RouteSelector
+              stations={stations}
+              fromStation={fromStation}
+              toStation={toStation}
+              onFromChange={setFromStation}
+              onToChange={setToStation}
+              onSwap={handleSwap}
             />
           </header>
 
@@ -627,16 +652,10 @@
     const root = ReactDOM.createRoot(document.getElementById('root'));
     root.render(<App />);
 
-    // Register Service Worker for PWA
     if ('serviceWorker' in navigator) {
       window.addEventListener('load', () => {
         navigator.serviceWorker.register('/sw.js')
-          .then((registration) => {
-            console.log('Service Worker registered:', registration);
-          })
-          .catch((error) => {
-            console.log('Service Worker registration failed:', error);
-          });
+          .catch((error) => console.log('Service Worker registration failed:', error));
       });
     }
   </script>
