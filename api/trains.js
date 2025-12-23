@@ -7,10 +7,32 @@ const agent = new https.Agent({
 });
 
 // Station ID mappings
+// User IDs (from frontend) -> CP Internal IDs (for travel API)
 const STATION_MAP = {
     '94-21014': '94-69187', // Carcavelos
     '94-20006': '94-69005', // Cais do Sodre
 };
+
+// All Cascais Line Stations (Real CP IDs)
+const CASCAIS_LINE_STATIONS = [
+  { id: "94-69005", name: "Cais do Sodre" },
+  { id: "94-69013", name: "Santos" },
+  { id: "94-69039", name: "Alcantara -  Mar" },
+  { id: "94-69054", name: "Belem" },
+  { id: "94-69088", name: "Alges" },
+  { id: "94-69104", name: "Cruz Quebrada" },
+  { id: "94-69120", name: "Caxias" },
+  { id: "94-69146", name: "Paco de Arcos" },
+  { id: "94-69161", name: "Santo Amaro" },
+  { id: "94-69179", name: "Oeiras" },
+  { id: "94-69187", name: "Carcavelos" },
+  { id: "94-69203", name: "Parede" },
+  { id: "94-69229", name: "Sao Pedro do Estoril" },
+  { id: "94-69237", name: "Sao Joao do Estoril" },
+  { id: "94-69245", name: "Estoril" },
+  { id: "94-69252", name: "Monte Estoril" },
+  { id: "94-69260", name: "Cascais" }
+];
 
 // CP API Configuration
 const CP_API_CONFIG = {
@@ -21,10 +43,9 @@ const CP_API_CONFIG = {
 };
 
 async function fetchStationSchedule(stationId, timeOffsetMinutes = -10) {
+    const today = new Date().toISOString().split('T')[0];
     const now = new Date();
     now.setMinutes(now.getMinutes() + timeOffsetMinutes);
-    
-    const today = now.toISOString().split('T')[0];
     const time = `${now.getHours().toString().padStart(2, '0')}:${now.getMinutes().toString().padStart(2, '0')}`;
     
     const url = `${CP_API_CONFIG.BASE_URL}/stations/${stationId}/timetable/${today}?start=${time}`;
@@ -70,13 +91,17 @@ module.exports = async (req, res) => {
         return res.status(200).end();
     }
 
-    const { stationId } = req.query;
+    const { stationId, toStationId } = req.query;
     
-    if (!stationId || !STATION_MAP[stationId]) {
+    // Check if it's a legacy mapped ID or a direct valid ID
+    const isLegacyId = STATION_MAP[stationId] !== undefined;
+    const directStation = CASCAIS_LINE_STATIONS.find(s => s.id === stationId);
+    
+    if (!isLegacyId && !directStation) {
         return res.status(400).json({ error: 'Valid Station ID required' });
     }
 
-    const cpStationId = STATION_MAP[stationId];
+    const cpStationId = isLegacyId ? STATION_MAP[stationId] : stationId;
     
     try {
         // Fetch current trains (using -10 min buffer as before) and future trains (+20 min)
@@ -98,29 +123,70 @@ module.exports = async (req, res) => {
         
         // Mock train for localhost testing
         if (req.headers.host && (req.headers.host.includes('localhost') || req.headers.host.includes('127.0.0.1'))) {
-            stationStops.push({
-                trainNumber: '99999',
-                trainDestination: { code: stationId === '94-21014' ? '94-69005' : '94-69260', designation: 'Teste Local' },
-                delay: 5,
-                departureTime: new Date(Date.now() + 10 * 60000).toLocaleTimeString('pt-PT', { hour: '2-digit', minute: '2-digit' }),
-                arrivalTime: new Date(Date.now() + 10 * 60000).toLocaleTimeString('pt-PT', { hour: '2-digit', minute: '2-digit' }),
-                platform: '1'
-            });
+             // Mock data removed for production clarity, but could be kept if needed
         }
 
+        // Filter and format the data
         const results = stationStops.map(stop => {
-            const destinationCode = stop.trainDestination ? stop.trainDestination.code : '';
+            // Determine destination name
             const destinationName = stop.trainDestination ? stop.trainDestination.designation : 'Unknown';
+            const destinationCode = stop.trainDestination ? stop.trainDestination.code : '';
             
-            let isRelevant = false;
+            // Filter based on direction requested
+            let isRelevant = true;
             
-            if (stationId === '94-21014') { // From Carcavelos to Lisbon
-                if (destinationCode === '94-69005' || destinationCode === '94-30005') {
-                    isRelevant = true;
+            // Only apply strict filtering for legacy requests
+            if (isLegacyId) {
+                isRelevant = false;
+                if (stationId === '94-21014') { // From Carcavelos
+                    // We want trains to Cais do Sodre
+                    if (destinationCode === '94-69005' || destinationCode === '94-30005') {
+                        isRelevant = true;
+                    }
+                } else if (stationId === '94-20006') { // From Cais do Sodre
+                    // We want trains to Cascais
+                    if (destinationCode === '94-69260' || destinationCode === '94-30260') {
+                        isRelevant = true;
+                    }
                 }
-            } else if (stationId === '94-20006') { // From Cais do Sodre to Cascais
-                if (destinationCode === '94-69260' || destinationCode === '94-30260') {
-                    isRelevant = true;
+            } else {
+                // For direct station selection
+                // 1. Filter out trains that terminate here
+                if (destinationCode === cpStationId) {
+                    isRelevant = false;
+                }
+                
+                // 2. If toStationId is provided, filter trains that don't reach it
+                if (isRelevant && toStationId) {
+                    const startIndex = CASCAIS_LINE_STATIONS.findIndex(s => s.id === cpStationId);
+                    const endIndex = CASCAIS_LINE_STATIONS.findIndex(s => s.id === toStationId);
+                    const destIndex = CASCAIS_LINE_STATIONS.findIndex(s => s.id === destinationCode);
+                    
+                    if (startIndex !== -1 && endIndex !== -1 && destIndex !== -1) {
+                        const isDownstream = startIndex < endIndex; // Towards Cascais
+                        
+                        if (isDownstream) {
+                            // Train must be going Downstream (dest > start) AND reach end (dest >= end)
+                            if (destIndex <= startIndex || destIndex < endIndex) {
+                                isRelevant = false;
+                            }
+                        } else {
+                            // Train must be going Upstream (dest < start) AND reach end (dest <= end)
+                            if (destIndex >= startIndex || destIndex > endIndex) {
+                                isRelevant = false;
+                            }
+                        }
+                    } else {
+                        // If we can't map stations (unknown IDs), rely on basic heuristic
+                        // Assume common destinations
+                        const isCascaisDest = destinationCode === '94-69260';
+                        const isCaisDest = destinationCode === '94-69005';
+                        
+                        // If we know we are going to Cascais but train goes to Cais
+                        if (toStationId === '94-69260' && isCaisDest) isRelevant = false;
+                        // If we know we are going to Cais but train goes to Cascais
+                        if (toStationId === '94-69005' && isCascaisDest) isRelevant = false;
+                    }
                 }
             }
             
@@ -129,10 +195,12 @@ module.exports = async (req, res) => {
             const delayMinutes = stop.delay || 0;
             const timeStr = stop.departureTime || stop.arrivalTime; 
             const [hours, minutes] = timeStr.split(':').map(Number);
-            const now = new Date();
+            
+            // Create scheduled date object
             const scheduledDate = new Date();
             scheduledDate.setHours(hours, minutes, 0, 0);
             
+            const now = new Date();
             let minutesToDeparture = Math.round((scheduledDate - now) / 60000);
             const actualMinutesToDeparture = minutesToDeparture + delayMinutes;
             
